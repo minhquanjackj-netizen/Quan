@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YouTube Clone — Main</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9fb;
+      color: #111;
+      scroll-behavior: smooth;
+    }
+
+    nav.sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      padding: 12px;
+      overflow-y: auto;
+      z-index: 20;
+    }
+
+    .nav-list {
+      list-style: none;
+      margin-top: 10px
+    }
+
+    .nav-item {
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    .nav-item:hover {
+      background: #ececec
+    }
+
+    header {
+      height: 60px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid #ddd;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      gap: 10px;
+    }
+
+    .search {
+      display: flex;
+      flex: 1;
+      gap: 8px;
+      margin-left: 20px
+    }
+
+    .search input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px
+    }
+
+    .search button {
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+
+    main {
+      padding: 16px;
+    }
+
+    .player-area {
+      margin-bottom: 14px
+    }
+
+    .player-video {
+      width: 100%;
+      height: 380px;
+      background: #000;
+      border-radius: 8px;
+      margin-bottom: 10px
+    }
+
+    h2 {
+      margin-bottom: 12px
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px
+    }
+
+    .video-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.5s;
+      opacity: 0;
+    }
+
+    .video-card.show {
+      opacity: 1;
+    }
+
+    .video-card:hover {
+      transform: scale(1.03);
+    }
+
+    .video-card img {
+      width: 100%;
+      height: 130px;
+      object-fit: cover
+    }
+
+    .meta {
+      padding: 8px
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: bold
+    }
+
+    .channel {
+      font-size: 12px;
+      color: #666
+    }
+
+    .main-container {
+      margin-left: 240px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    /* Profile */
+    #profileSection {
+      margin-top: 16px;
+      text-align: center;
+    }
+
+    #profileSection img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #ccc;
+    }
+
+    #logoutBtn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      border: none;
+      background: #ff0000;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="sidebar">
+    <strong>Trang chính</strong>
+    <ul class="nav-list">
+      <li class="nav-item" id="homeItem">🏠 Trang chủ</li>
+    </ul>
+
+    <strong>Khám phá</strong>
+    <ul class="nav-list">
+      <li class="nav-item" id="musicItem">🎵 Âm nhạc</li>
+      <li class="nav-item" id="gameItem">🎮 Game</li>
+      <li class="nav-item" id="newsItem">📰 Tin tức</li>
+    </ul>
+
+    <div id="profileSection">
+      <img id="profileAvatar" src="images/default-avatar.png" alt="Avatar">
+      <p id="profileName">User</p>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+      <button id="logoutBtn">Đăng xuất</button>
+    </div>
+  </nav>
+
+  <div class="main-container" id="mainContainer">
+    <header id="header">
+      <h3>YouTube Clone</h3>
+      <div class="search">
+        <input type="text" placeholder="Tìm video..." id="searchInput">
+        <button id="searchBtn">🔍</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="player-area">
+        <div class="player-video" id="videoPlayer"></div>
+      </div>
+
+      <h2>Gợi ý video</h2>
+      <div class="grid" id="results"></div>
+    </main>
+  </div>
+
+  <script>
+    const API_KEY = 'AIzaSyBu5YRyr34SpPbZgrXDu2EzW-0339Jipac';
+    const results = document.getElementById("results");
+    const player = document.getElementById("videoPlayer");
+    const searchBtn = document.getElementById("searchBtn");
+    const input = document.getElementById("searchInput");
+    const mainContainer = document.getElementById("mainContainer");
+
+    const profileAvatar = document.getElementById("profileAvatar");
+    const avatarInput = document.getElementById("avatarInput");
+    const profileName = document.getElementById("profileName");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    // Lấy thông tin từ URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const fullname = urlParams.get("fullname") || "User";
+    const avatar = urlParams.get("avatar") || "https://i.pravatar.cc/100";
+    profileName.innerText = fullname;
+    profileAvatar.src = avatar;
+
+    // Avatar click
+    profileAvatar.addEventListener("click", () => avatarInput.click());
+    avatarInput.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => { profileAvatar.src = reader.result; };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      alert("Bạn đã đăng xuất!");
+      window.location.href = "dangnhap.html";
+    });
+
+    // Scroll animation
+    mainContainer.addEventListener('scroll', () => {
+      const cards = document.querySelectorAll('.video-card:not(.show)');
+      const windowHeight = mainContainer.clientHeight;
+      cards.forEach(card => { if (card.getBoundingClientRect().top < windowHeight + 200) card.classList.add('show'); });
+    });
+
+    function playVideo(id) {
+      player.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0" frameborder="0" allowfullscreen></iframe>`;
+    }
+
+    async function searchVideos(query) {
+      results.innerHTML = "Đang tải...";
+      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=${encodeURIComponent(query)}&key=${API_KEY}`);
+      const data = await searchRes.json();
+      const ids = data.items.map(v => v.id.videoId);
+      const detailRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=status,snippet&id=${ids.join(',')}&key=${API_KEY}`);
+      const details = await detailRes.json();
+      const allowed = details.items.filter(v => v.status.embeddable);
+      results.innerHTML = "";
+      allowed.forEach(v => {
+        const card = document.createElement("div");
+        card.className = "video-card";
+        card.innerHTML = `<img src="${v.snippet.thumbnails.medium.url}"><div class="meta"><div class="title">${v.snippet.title}</div><div class="channel">${v.snippet.channelTitle}</div></div>`;
+        card.onclick = () => { playVideo(v.id); player.scrollIntoView({ behavior: "smooth", block: "start" }); };
+        results.append(card);
+      });
+      if (allowed.length > 0) playVideo(allowed[0].id);
+      mainContainer.dispatchEvent(new Event('scroll'));
+    }
+
+    searchBtn.onclick = () => searchVideos(input.value || "game highlights");
+    searchVideos("game highlights");
+
+    // Sidebar click
+    document.getElementById("homeItem").addEventListener("click", () => searchVideos("game highlights"));
+    document.getElementById("musicItem").addEventListener("click", () => searchVideos("music"));
+    document.getElementById("gameItem").addEventListener("click", () => searchVideos("gaming"));
+    document.getElementById("newsItem").addEventListener("click", () => searchVideos("news"));
+  </script>
+</body>
+
+</html>
